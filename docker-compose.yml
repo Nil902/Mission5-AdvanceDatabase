@@ -73,6 +73,7 @@ services:
       REDIS_TTL: 3600
     volumes:
       - postgres-logs:/var/log/postgresql:ro
+      - ./pgbadger-reports:/reports
     depends_on:
       postgres-db:
         condition: service_healthy
