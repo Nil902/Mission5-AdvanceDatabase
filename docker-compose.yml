@@ -128,11 +128,10 @@ services:
       - postgres-logs:/var/log/postgresql:ro
       - ./pgbadger-reports:/reports
     command: >
-      pgbadger
-        /var/log/postgresql/postgresql-*.log
-        --outfile /reports/report.html
-        --format stderr
-        --jobs 4
+      /var/log/postgresql/postgresql-*.log
+      --outfile /reports/report.html
+      --format stderr
+      --jobs 4
     networks:
       - event-network
 
