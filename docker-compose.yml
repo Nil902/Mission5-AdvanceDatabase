@@ -106,6 +106,18 @@ services:
       - event-network
     restart: unless-stopped
 
+  # ── pgBadger Report Web Server ─────────────────────────────
+  pgbadger-web:
+    image: nginx:alpine
+    container_name: pgbadger-web
+    ports:
+      - "9090:80"
+    volumes:
+      - ./pgbadger-reports:/usr/share/nginx/html:ro
+    networks:
+      - event-network
+    restart: unless-stopped
+
   # ── pgBadger Report Generator ────────────────────────────
   # Run manually:  docker compose run --rm pgbadger
   pgbadger:
