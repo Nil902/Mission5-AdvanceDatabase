@@ -1,0 +1,136 @@
+# ─────────────────────────────────────────────────────────────
+#  Event Announcement System — Docker Compose
+#
+#  Server 01: Spring Boot app     → localhost:8080
+#  Server 02: Redis cache         → localhost:6379 (internal)
+#  Server 03: Python cache manager → localhost:8000
+#  Server 04: PostgreSQL          → localhost:5432 (internal)
+# ─────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Server 01: Spring Boot Web App ──────────────────────
+  springboot-app:
+    build:
+      context: ./event-app
+      dockerfile: Dockerfile
+    container_name: server01-springboot
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/eventdb
+      SPRING_DATASOURCE_USERNAME: eventuser
+      SPRING_DATASOURCE_PASSWORD: eventpass
+      SPRING_DATA_REDIS_HOST: redis-cache
+      SPRING_DATA_REDIS_PORT: 6379
+      CACHE_MANAGER_URL: http://cache-manager:8000
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+      cache-manager:
+        condition: service_started
+    networks:
+      - event-network
+    restart: unless-stopped
+
+  # ── Server 02: Redis Cache ───────────────────────────────
+  redis-cache:
+    image: redis:7.2-alpine
+    container_name: server02-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./server02-redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - redis-data:/data
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - event-network
+    restart: unless-stopped
+
+  # ── Server 03: Python Cache Manager ─────────────────────
+  cache-manager:
+    build:
+      context: ./server03-cache-manager
+      dockerfile: Dockerfile
+    container_name: server03-cache-manager
+    ports:
+      - "8000:8000"
+    environment:
+      PG_HOST: postgres-db
+      PG_PORT: 5432
+      PG_DB: eventdb
+      PG_USER: eventuser
+      PG_PASS: eventpass
+      REDIS_HOST: redis-cache
+      REDIS_PORT: 6379
+      REDIS_TTL: 3600
+    volumes:
+      - postgres-logs:/var/log/postgresql:ro
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+    networks:
+      - event-network
+    restart: unless-stopped
+
+  # ── Server 04: PostgreSQL Main Database ──────────────────
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: server04-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: eventdb
+      POSTGRES_USER: eventuser
+      POSTGRES_PASSWORD: eventpass
+    volumes:
+      - ./server04-postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres-data:/var/lib/postgresql/data
+      - postgres-logs:/var/log/postgresql
+    entrypoint: ["sh", "-c", "chown postgres:postgres /var/log/postgresql && exec docker-entrypoint.sh postgres -c log_destination=stderr -c logging_collector=on -c log_directory=/var/log/postgresql -c 'log_filename=postgresql-%Y-%m-%d.log' -c log_min_duration_statement=0 -c 'log_line_prefix=%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h ' -c log_checkpoints=on -c log_connections=on -c log_disconnections=on -c log_lock_waits=on -c log_temp_files=0 -c log_autovacuum_min_duration=0 -c lc_messages=C"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventuser -d eventdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - event-network
+    restart: unless-stopped
+
+  # ── pgBadger Report Generator ────────────────────────────
+  # Run manually:  docker compose run --rm pgbadger
+  pgbadger:
+    image: dalibo/pgbadger:latest
+    container_name: pgbadger
+    profiles: ["tools"]
+    volumes:
+      - postgres-logs:/var/log/postgresql:ro
+      - ./pgbadger-reports:/reports
+    command: >
+      pgbadger
+        /var/log/postgresql/postgresql-*.log
+        --outfile /reports/report.html
+        --format stderr
+        --jobs 4
+    networks:
+      - event-network
+
+# ─── Volumes ─────────────────────────────────────────────
+volumes:
+  postgres-data:
+  postgres-logs:
+  redis-data:
+
+# ─── Network ─────────────────────────────────────────────
+networks:
+  event-network:
+    driver: bridge

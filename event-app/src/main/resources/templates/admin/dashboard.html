@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin — EventHub</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+  <style>
+    /* ── Tokens ─────────────────────────────────── */
+    :root {
+      --ink:        #0e0e11;
+      --ink-2:      #6b6b7b;
+      --ink-3:      #9898a8;
+      --canvas:     #f7f7f9;
+      --surface:    #ffffff;
+      --sidebar-bg: #0e0e11;
+      --sidebar-w:  228px;
+      --accent:     #5B4FE9;
+      --accent-2:   #7B6FF0;
+      --accent-dim: #EEF0FF;
+      --green:      #16a34a;
+      --green-bg:   #dcfce7;
+      --green-text: #14532d;
+      --red:        #dc2626;
+      --red-bg:     #fee2e2;
+      --red-text:   #7f1d1d;
+      --amber:      #d97706;
+      --amber-bg:   #fef3c7;
+      --amber-text: #78350f;
+      --border:     #ebebef;
+      --radius:     12px;
+      --radius-sm:  8px;
+      --shadow:     0 1px 10px rgba(14,14,17,0.06);
+      --shadow-md:  0 4px 20px rgba(14,14,17,0.09);
+    }
+
+    /* ── Reset ──────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--canvas);
+      color: var(--ink);
+      display: flex;
+    }
+
+    /* ── Sidebar ────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--sidebar-bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 1.5rem 1rem 2rem;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 0.5rem;
+      margin-bottom: 2rem;
+      text-decoration: none;
+    }
+    .brand-mark {
+      width: 28px; height: 28px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem;
+      color: white;
+      flex-shrink: 0;
+    }
+    .brand-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: white;
+      letter-spacing: -0.3px;
+    }
+    .brand-role {
+      font-size: 0.68rem;
+      color: rgba(255,255,255,0.3);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .nav-section {
+      margin-bottom: 1.75rem;
+    }
+    .nav-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.25);
+      padding: 0 0.5rem;
+      margin-bottom: 0.4rem;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0.55rem 0.75rem;
+      border-radius: var(--radius-sm);
+      color: rgba(255,255,255,0.5);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 400;
+      transition: all 0.15s;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+    }
+    .nav-item i { font-size: 0.95rem; flex-shrink: 0; }
+    .nav-item:hover { color: white; background: rgba(255,255,255,0.06); }
+    .nav-item.active { color: white; background: rgba(91,79,233,0.3); }
+    .nav-item.active i { color: #a5b4fc; }
+
+    /* Cache status pill in sidebar */
+    .cache-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+    .cache-dot.ok  { background: #4ade80; box-shadow: 0 0 4px #4ade8088; }
+    .cache-dot.bad { background: #f87171; }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 0.5rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding-top: 1rem;
+    }
+    .cm-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0.6rem 0.75rem;
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.04);
+    }
+    .cm-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .cm-dot.ok  { background: #4ade80; }
+    .cm-dot.bad { background: #f87171; }
+    .cm-info { flex: 1; min-width: 0; }
+    .cm-label { font-size: 0.7rem; color: rgba(255,255,255,0.3); display: block; }
+    .cm-value { font-size: 0.78rem; color: rgba(255,255,255,0.65); font-weight: 500; }
+
+    /* ── Main ───────────────────────────────────── */
+    .main-wrap {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top bar */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.9rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .topbar-left h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.3px;
+    }
+    .topbar-left p {
+      font-size: 0.78rem;
+      color: var(--ink-3);
+      margin: 0;
+    }
+    .topbar-actions {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+    }
+    .btn-topbar {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.45rem 1rem;
+      border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.83rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--ink-2);
+    }
+    .btn-topbar:hover { border-color: #ccc; color: var(--ink); background: var(--canvas); }
+    .btn-topbar.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+    .btn-topbar.primary:hover { background: var(--accent-2); border-color: var(--accent-2); color: white; }
+
+    /* Page content */
+    .page-content { padding: 1.75rem 2rem 3rem; }
+
+    /* ── Toast / Flash ──────────────────────────── */
+    .flash {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.8rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 1.5rem;
+    }
+    .flash.success { background: var(--green-bg); color: var(--green-text); }
+    .flash.warning { background: var(--amber-bg); color: var(--amber-text); }
+    .flash i { flex-shrink: 0; }
+
+    /* ── Stat cards ─────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+    }
+    .stat-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.25rem;
+      box-shadow: var(--shadow);
+      border: 1.5px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .stat-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .stat-icon {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+    .si-purple { background: var(--accent-dim); color: var(--accent); }
+    .si-green  { background: var(--green-bg); color: var(--green); }
+    .si-amber  { background: var(--amber-bg); color: var(--amber); }
+    .si-red    { background: var(--red-bg); color: var(--red); }
+    .stat-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -1px;
+      line-height: 1;
+      margin-top: 0.5rem;
+    }
+    .stat-label { font-size: 0.78rem; color: var(--ink-3); }
+
+    /* Status cards (cache/CM) */
+    .status-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      box-shadow: var(--shadow);
+      border: 1.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+    .status-indicator {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-indicator.ok  { background: var(--green); box-shadow: 0 0 0 3px var(--green-bg); }
+    .status-indicator.bad { background: var(--red);   box-shadow: 0 0 0 3px var(--red-bg); }
+    .status-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-3); display: block; margin-bottom: 1px; }
+    .status-value { font-size: 0.88rem; font-weight: 600; color: var(--ink); }
+    .status-sub   { font-size: 0.75rem; color: var(--ink-3); }
+
+    /* ── Table card ─────────────────────────────── */
+    .table-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1.5px solid var(--border);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+    .table-card-header {
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .table-card-header h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.2px;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.855rem;
+    }
+    table.data-table thead tr {
+      border-bottom: 1px solid var(--border);
+      background: var(--canvas);
+    }
+    table.data-table thead th {
+      padding: 0.6rem 1rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--ink-3);
+      text-align: left;
+      white-space: nowrap;
+    }
+    table.data-table tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+    }
+    table.data-table tbody tr:last-child { border-bottom: none; }
+    table.data-table tbody tr:hover { background: var(--canvas); }
+    table.data-table tbody td {
+      padding: 0.75rem 1rem;
+      color: var(--ink);
+      vertical-align: middle;
+    }
+    .td-muted { color: var(--ink-3); font-size: 0.78rem; font-family: 'DM Sans', monospace; }
+    .td-bold  { font-weight: 600; }
+
+    /* Badges */
+    .badge-cat {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 50px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+    .badge-active {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 50px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .badge-active.on  { background: var(--green-bg); color: var(--green-text); }
+    .badge-active.off { background: var(--canvas); color: var(--ink-3); border: 1px solid var(--border); }
+    .badge-active::before {
+      content: '';
+      width: 5px; height: 5px;
+      border-radius: 50%;
+    }
+    .badge-active.on::before  { background: var(--green); }
+    .badge-active.off::before { background: var(--ink-3); }
+
+    /* Action buttons in table */
+    .action-group { display: flex; gap: 0.35rem; align-items: center; }
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px; height: 30px;
+      border-radius: 7px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--ink-2);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+    .btn-action:hover        { background: var(--canvas); color: var(--ink); border-color: #ccc; }
+    .btn-action.edit:hover   { background: var(--accent-dim); color: var(--accent); border-color: #c7c4f8; }
+    .btn-action.toggle:hover { background: var(--amber-bg); color: var(--amber); border-color: #fde68a; }
+    .btn-action.del:hover    { background: var(--red-bg); color: var(--red); border-color: #fca5a5; }
+
+    /* ── Bottom two-col ─────────────────────────── */
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1fr 1.6fr;
+      gap: 1.25rem;
+    }
+
+    /* Category form */
+    .form-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1.5px solid var(--border);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .form-card-header {
+      padding: 0.9rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .form-card-header h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.2px;
+    }
+    .form-card-body { padding: 1.25rem; }
+
+    .field-wrap { margin-bottom: 0.75rem; }
+    .field-wrap label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--ink-2);
+      margin-bottom: 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .field-input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      color: var(--ink);
+      background: var(--surface);
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    .field-input:focus { border-color: var(--accent); }
+    .field-input::placeholder { color: var(--ink-3); }
+
+    .btn-submit {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.5rem 1.1rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-submit:hover { background: var(--accent-2); }
+
+    /* Categories mini table */
+    .mini-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    .mini-table thead th {
+      padding: 0.55rem 1rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--ink-3);
+      text-align: left;
+      background: var(--canvas);
+      border-bottom: 1px solid var(--border);
+    }
+    .mini-table tbody tr { border-bottom: 1px solid var(--border); }
+    .mini-table tbody tr:last-child { border-bottom: none; }
+    .mini-table tbody td { padding: 0.65rem 1rem; color: var(--ink); vertical-align: middle; }
+    .mini-table .cat-name { font-weight: 500; }
+    .mini-table .cat-desc { font-size: 0.78rem; color: var(--ink-3); }
+
+    .btn-icon-sm {
+      width: 26px; height: 26px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--ink-3);
+      font-size: 0.78rem;
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-icon-sm:hover { background: var(--red-bg); color: var(--red); border-color: #fca5a5; }
+
+    /* ── Responsive ─────────────────────────────── */
+    @media (max-width: 1024px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .bottom-row { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .page-content { padding: 1rem; }
+      .topbar { padding: 0.75rem 1rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Sidebar ───────────────────────────────────────── -->
+<aside class="sidebar">
+  <a href="/admin" class="sidebar-brand">
+    <div class="brand-mark"><i class="bi bi-bullseye"></i></div>
+    <div>
+      <div class="brand-name">EventHub</div>
+      <div class="brand-role">Admin</div>
+    </div>
+  </a>
+
+  <!-- Nav: Main -->
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <a href="/admin" class="nav-item active">
+      <i class="bi bi-grid-1x2"></i> Dashboard
+    </a>
+    <a href="/admin/events/new" class="nav-item">
+      <i class="bi bi-plus-circle"></i> New event
+    </a>
+    <a href="/" target="_blank" class="nav-item">
+      <i class="bi bi-box-arrow-up-right"></i> View homepage
+    </a>
+  </div>
+
+  <!-- Nav: Cache -->
+  <div class="nav-section">
+    <div class="nav-label">Cache</div>
+    <form method="post" action="/admin/cache/refresh">
+      <button type="submit" class="nav-item">
+        <i class="bi bi-arrow-clockwise"></i> Refresh cache
+        <span class="cache-dot ok" th:if="${cachePopulated}" th:title="'TTL: ' + ${cacheTtl} + 's'"></span>
+        <span class="cache-dot bad" th:unless="${cachePopulated}"></span>
+      </button>
+    </form>
+    <form method="post" action="/admin/cache/invalidate">
+      <button type="submit" class="nav-item">
+        <i class="bi bi-trash3"></i> Clear cache
+      </button>
+    </form>
+  </div>
+
+  <!-- Nav: Reports -->
+  <div class="nav-section">
+    <div class="nav-label">Reports</div>
+    <form method="post" action="/admin/report/generate">
+      <button type="submit" class="nav-item">
+        <i class="bi bi-bar-chart-line"></i> Generate pgBadger
+      </button>
+    </form>
+    <a href="http://localhost:8000/report/view" target="_blank" class="nav-item">
+      <i class="bi bi-file-earmark-bar-graph"></i> View report
+    </a>
+  </div>
+
+  <!-- Cache Manager status -->
+  <div class="sidebar-footer">
+    <div class="cm-status">
+      <span class="cm-dot ok"  th:if="${cacheManagerHealthy}"></span>
+      <span class="cm-dot bad" th:unless="${cacheManagerHealthy}"></span>
+      <div class="cm-info">
+        <span class="cm-label">Cache Manager</span>
+        <span class="cm-value" th:text="${cacheManagerHealthy} ? 'Online' : 'Offline'">Online</span>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ── Main wrap ──────────────────────────────────────── -->
+<div class="main-wrap">
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1>Dashboard</h1>
+      <p>Manage events, categories, and system health</p>
+    </div>
+    <div class="topbar-actions">
+      <a href="/" target="_blank" class="btn-topbar">
+        <i class="bi bi-eye"></i> Preview site
+      </a>
+      <a href="/admin/events/new" class="btn-topbar primary">
+        <i class="bi bi-plus-lg"></i> New event
+      </a>
+    </div>
+  </header>
+
+  <!-- Page content -->
+  <div class="page-content">
+
+    <!-- Flash messages -->
+    <div class="flash success" th:if="${success}">
+      <i class="bi bi-check-circle-fill"></i>
+      <span th:text="${success}"></span>
+    </div>
+    <div class="flash warning" th:if="${warning}">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <span th:text="${warning}"></span>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-row">
+
+      <!-- Total events -->
+      <div class="stat-card">
+        <div class="stat-card-top">
+          <div class="stat-icon si-purple"><i class="bi bi-calendar-event"></i></div>
+        </div>
+        <div class="stat-num" th:text="${#lists.size(events)}">0</div>
+        <div class="stat-label">Total events</div>
+      </div>
+
+      <!-- Categories -->
+      <div class="stat-card">
+        <div class="stat-card-top">
+          <div class="stat-icon si-green"><i class="bi bi-tag"></i></div>
+        </div>
+        <div class="stat-num" th:text="${#lists.size(categories)}">0</div>
+        <div class="stat-label">Categories</div>
+      </div>
+
+      <!-- Redis status -->
+      <div class="stat-card">
+        <div class="stat-card-top">
+          <div class="stat-icon" th:classappend="${cachePopulated} ? 'si-green' : 'si-red'">
+            <i class="bi bi-server"></i>
+          </div>
+        </div>
+        <div class="status-card" style="padding:0;background:transparent;border:none;box-shadow:none;margin-top:0.4rem;gap:0.6rem">
+          <span class="status-indicator" th:classappend="${cachePopulated} ? 'ok' : 'bad'"></span>
+          <div>
+            <div class="status-value" th:text="${cachePopulated} ? 'Cache live' : 'Cache empty'">Cache live</div>
+            <div class="status-sub" th:text="${cachePopulated} ? 'TTL: ' + cacheTtl + 's left' : 'Trigger refresh'">TTL</div>
+          </div>
+        </div>
+        <div class="stat-label">Redis</div>
+      </div>
+
+      <!-- Cache Manager -->
+      <div class="stat-card">
+        <div class="stat-card-top">
+          <div class="stat-icon" th:classappend="${cacheManagerHealthy} ? 'si-green' : 'si-red'">
+            <i class="bi bi-cpu"></i>
+          </div>
+        </div>
+        <div class="status-card" style="padding:0;background:transparent;border:none;box-shadow:none;margin-top:0.4rem;gap:0.6rem">
+          <span class="status-indicator" th:classappend="${cacheManagerHealthy} ? 'ok' : 'bad'"></span>
+          <div>
+            <div class="status-value" th:text="${cacheManagerHealthy} ? 'Online' : 'Offline'">Online</div>
+            <div class="status-sub">Server 03 · FastAPI</div>
+          </div>
+        </div>
+        <div class="stat-label">Cache Manager</div>
+      </div>
+
+    </div>
+
+    <!-- Events table -->
+    <div class="table-card">
+      <div class="table-card-header">
+        <h2>Events</h2>
+        <a href="/admin/events/new" class="btn-topbar primary" style="padding:0.38rem 0.9rem;font-size:0.8rem">
+          <i class="bi bi-plus-lg"></i> New event
+        </a>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Event date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="event : ${events}">
+            <td class="td-muted" th:text="'#' + ${event.id}">1</td>
+            <td class="td-bold" th:text="${event.title}">Title</td>
+            <td><span class="badge-cat" th:text="${event.category.name}">Category</span></td>
+            <td class="td-muted" th:text="${#temporals.format(event.eventDate, 'MMM dd, yyyy')}">Date</td>
+            <td>
+              <span th:if="${event.isActive}"  class="badge-active on">Active</span>
+              <span th:unless="${event.isActive}" class="badge-active off">Inactive</span>
+            </td>
+            <td>
+              <div class="action-group">
+                <a th:href="@{/admin/events/{id}/edit(id=${event.id})}"
+                   class="btn-action edit" title="Edit event">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <form th:action="@{/admin/events/{id}/toggle(id=${event.id})}" method="post" style="display:contents">
+                  <button type="submit" class="btn-action toggle" title="Toggle active">
+                    <i class="bi bi-toggle-on"></i>
+                  </button>
+                </form>
+                <form th:action="@{/admin/events/{id}/delete(id=${event.id})}" method="post"
+                      style="display:contents"
+                      onsubmit="return confirm('Delete this event? This cannot be undone.')">
+                  <button type="submit" class="btn-action del" title="Delete event">
+                    <i class="bi bi-trash3"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          <!-- Empty state -->
+          <tr th:if="${#lists.isEmpty(events)}">
+            <td colspan="6" style="text-align:center;padding:2.5rem;color:var(--ink-3);font-size:0.87rem">
+              No events yet. <a href="/admin/events/new" style="color:var(--accent)">Create your first event →</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Bottom row: Add category + Category list -->
+    <div class="bottom-row">
+
+      <!-- Add category form -->
+      <div class="form-card">
+        <div class="form-card-header">
+          <h2>Add category</h2>
+        </div>
+        <div class="form-card-body">
+          <form method="post" action="/admin/categories/create">
+            <div class="field-wrap">
+              <label for="cat-name">Name</label>
+              <input id="cat-name" type="text" name="name" class="field-input"
+                     placeholder="e.g. Workshop" required/>
+            </div>
+            <div class="field-wrap">
+              <label for="cat-desc">Description</label>
+              <input id="cat-desc" type="text" name="description" class="field-input"
+                     placeholder="Brief description"/>
+            </div>
+            <button type="submit" class="btn-submit">
+              <i class="bi bi-plus-lg"></i> Add category
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Category list -->
+      <div class="form-card">
+        <div class="form-card-header" style="display:flex;align-items:center;justify-content:space-between">
+          <h2>Categories</h2>
+          <span style="font-size:0.78rem;color:var(--ink-3)" th:text="${#lists.size(categories)} + ' total'">0 total</span>
+        </div>
+        <table class="mini-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Description</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="cat : ${categories}">
+              <td class="cat-name" th:text="${cat.name}">Name</td>
+              <td class="cat-desc" th:text="${cat.description}">Description</td>
+              <td style="text-align:right">
+                <form th:action="@{/admin/categories/{id}/delete(id=${cat.id})}" method="post"
+                      onsubmit="return confirm('Delete this category?')">
+                  <button type="submit" class="btn-icon-sm" title="Delete">
+                    <i class="bi bi-trash3"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(categories)}">
+              <td colspan="3" style="text-align:center;padding:1.5rem;color:var(--ink-3);font-size:0.83rem">
+                No categories yet
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div><!-- /page-content -->
+</div><!-- /main-wrap -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

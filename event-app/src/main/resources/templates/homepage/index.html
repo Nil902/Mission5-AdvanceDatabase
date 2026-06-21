@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EventHub — Upcoming Events</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+  <style>
+    /* ── Tokens ────────────────────────────────────────── */
+    :root {
+      --ink:     #0e0e11;
+      --ink-2:   #6b6b7b;
+      --ink-3:   #9898a8;
+      --canvas:  #f7f7f9;
+      --surface: #ffffff;
+      --accent:  #5B4FE9;
+      --accent-2:#7B6FF0;
+      --accent-3:#EEF0FF;
+      --green:   #16a34a;
+      --green-bg:#dcfce7;
+      --warn-bg: #fef9c3;
+      --warn:    #a16207;
+      --radius:  14px;
+      --radius-sm: 8px;
+      --shadow:  0 2px 16px rgba(14,14,17,0.07);
+      --shadow-lg: 0 8px 40px rgba(14,14,17,0.12);
+    }
+
+    /* ── Base ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--canvas);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--ink);
+      margin: 0;
+    }
+    h1,h2,h3,h4,h5,h6 { font-family: 'Syne', sans-serif; }
+
+    /* ── Navbar ────────────────────────────────────────── */
+    .site-nav {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 1.25rem 0;
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+    .brand {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: white;
+      text-decoration: none;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-dot {
+      width: 8px; height: 8px;
+      background: #a5f3fc;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .nav-source {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.6);
+    }
+    .source-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .source-badge.ok  { background: rgba(22,163,74,0.25); color: #86efac; }
+    .source-badge.warn { background: rgba(234,179,8,0.25); color: #fde68a; }
+
+    /* ── Hero ──────────────────────────────────────────── */
+    .hero {
+      background: var(--ink);
+      padding: 7rem 0 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+    /* Signature: subtle radial glow that makes this feel alive */
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -120px; left: 50%;
+      transform: translateX(-50%);
+      width: 700px; height: 500px;
+      background: radial-gradient(ellipse at center, rgba(91,79,233,0.45) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    /* Grid texture overlay */
+    .hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+    .hero-content { position: relative; z-index: 2; }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 50px;
+      padding: 5px 14px;
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.5px;
+    }
+    .hero-eyebrow .dot {
+      width: 6px; height: 6px;
+      background: #86efac;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; transform: scale(1); }
+      50%      { opacity:0.5; transform: scale(0.85); }
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 5vw, 3.6rem);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(90deg, #a5b4fc, #c4b5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: 1.05rem;
+      color: rgba(255,255,255,0.5);
+      max-width: 440px;
+      line-height: 1.6;
+      margin-bottom: 2.5rem;
+    }
+
+    /* ── Search bar ────────────────────────────────────── */
+    .search-bar {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      padding: 0.5rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      max-width: 660px;
+    }
+    .search-bar input,
+    .search-bar select {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: white;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      padding: 0.5rem 0.75rem;
+    }
+    .search-bar input::placeholder { color: rgba(255,255,255,0.35); }
+    .search-bar select option { background: #1a1a2e; color: white; }
+    .search-bar .sep {
+      width: 1px; height: 24px;
+      background: rgba(255,255,255,0.12);
+      flex-shrink: 0;
+    }
+    .search-bar input { flex: 1.4; }
+    .search-bar select { flex: 1; }
+    .btn-search {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 0.6rem 1.25rem;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .btn-search:hover { background: var(--accent-2); }
+    .btn-clear {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      color: rgba(255,255,255,0.5);
+      padding: 0.6rem 0.75rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+    }
+    .btn-clear:hover { background: rgba(255,255,255,0.08); color: white; }
+
+    /* ── Stats strip ───────────────────────────────────── */
+    .stats-strip {
+      background: var(--surface);
+      border-bottom: 1px solid #ebebef;
+      padding: 0.75rem 0;
+    }
+    .stats-inner {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.83rem;
+      color: var(--ink-2);
+    }
+    .stat-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .stat-dot.green { background: var(--green); }
+    .stat-dot.amber { background: #f59e0b; }
+    .stat-val { font-weight: 600; color: var(--ink); }
+
+    /* ── Main grid ─────────────────────────────────────── */
+    .main { max-width: 1140px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+    /* Category chips */
+    .filter-chips {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 14px;
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      border: 1.5px solid #e0e0eb;
+      color: var(--ink-2);
+      background: var(--surface);
+      transition: all 0.18s;
+    }
+    .chip:hover, .chip.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    /* Section heading */
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+    .section-head h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--ink);
+      margin: 0;
+    }
+    .section-head span {
+      font-size: 0.82rem;
+      color: var(--ink-3);
+    }
+
+    /* ── Event cards ───────────────────────────────────── */
+    .events-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+    .event-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+      border: 1.5px solid transparent;
+      display: flex;
+      flex-direction: column;
+    }
+    .event-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--accent-3);
+    }
+
+    /* Color-coded card top stripe — keyed by category index */
+    .card-stripe {
+      height: 5px;
+      flex-shrink: 0;
+    }
+    .stripe-0 { background: linear-gradient(90deg,#6366f1,#8b5cf6); }
+    .stripe-1 { background: linear-gradient(90deg,#0ea5e9,#38bdf8); }
+    .stripe-2 { background: linear-gradient(90deg,#f59e0b,#fbbf24); }
+    .stripe-3 { background: linear-gradient(90deg,#10b981,#34d399); }
+    .stripe-4 { background: linear-gradient(90deg,#f43f5e,#fb7185); }
+
+    .card-thumb {
+      height: 148px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: var(--accent-3);
+      overflow: hidden;
+    }
+    .card-thumb i { font-size: 3rem; color: var(--accent); opacity: 0.25; }
+    .card-thumb img {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transition: transform 0.35s ease;
+    }
+    .event-card:hover .card-thumb img { transform: scale(1.05); }
+    /* hide placeholder icon when image is present */
+    .card-thumb img + i { display: none; }
+    .card-cat {
+      position: absolute;
+      bottom: 0.75rem; left: 0.75rem;
+      background: var(--accent);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 50px;
+    }
+
+    .card-body-custom {
+      padding: 1.1rem 1.25rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .card-title-custom {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin: 0 0 0.5rem;
+      line-height: 1.35;
+      letter-spacing: -0.2px;
+    }
+    .card-desc {
+      font-size: 0.83rem;
+      color: var(--ink-2);
+      line-height: 1.55;
+      margin-bottom: 1rem;
+      flex: 1;
+    }
+    .card-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid #f0f0f4;
+    }
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.8rem;
+      color: var(--ink-2);
+    }
+    .meta-row i { font-size: 0.85rem; color: var(--ink-3); flex-shrink: 0; }
+    .meta-row.date { color: var(--accent); font-weight: 600; }
+    .meta-row.date i { color: var(--accent); }
+
+    /* ── Empty / warning states ────────────────────────── */
+    .state-box {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 3rem 2rem;
+      text-align: center;
+      border: 1.5px dashed #e0e0eb;
+    }
+    .state-box .state-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+    .state-box h4 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.4rem;
+    }
+    .state-box p { font-size: 0.87rem; color: var(--ink-2); margin: 0; }
+    .state-box .btn-state {
+      display: inline-block;
+      margin-top: 1.25rem;
+      padding: 0.5rem 1.25rem;
+      background: var(--accent);
+      color: white;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .state-box .btn-state:hover { background: var(--accent-2); }
+
+    /* ── Modal ─────────────────────────────────────────── */
+    .modal-content {
+      border: none;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(14,14,17,0.2);
+    }
+    .modal-hero {
+      background: var(--ink);
+      padding: 2rem 2rem 1.75rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .modal-hero::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 260px; height: 260px;
+      background: radial-gradient(circle, rgba(91,79,233,0.5) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .modal-hero-content { position: relative; z-index: 1; }
+    .modal-cat-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.8);
+      font-size: 0.73rem;
+      font-weight: 600;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 50px;
+      margin-bottom: 0.85rem;
+    }
+    .modal-title-custom {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -0.5px;
+      margin: 0;
+      line-height: 1.25;
+    }
+    .modal-close {
+      position: absolute;
+      top: 1rem; right: 1rem;
+      z-index: 2;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: rgba(255,255,255,0.7);
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+    .modal-close:hover { background: rgba(255,255,255,0.2); color: white; }
+
+    .modal-body-custom { padding: 1.75rem 2rem; }
+    .info-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.85rem 1rem;
+      background: var(--canvas);
+      border-radius: var(--radius-sm);
+      margin-bottom: 0.75rem;
+    }
+    .info-pill-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .info-pill-icon.purple { background: var(--accent-3); color: var(--accent); }
+    .info-pill-icon.red    { background: #ffe4e6; color: #e11d48; }
+    .info-pill label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-3); display: block; margin: 0 0 2px; }
+    .info-pill strong { font-size: 0.9rem; color: var(--ink); font-weight: 600; }
+
+    .about-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--ink-3);
+      margin: 1.25rem 0 0.6rem;
+    }
+    .modal-desc-text {
+      font-size: 0.93rem;
+      line-height: 1.7;
+      color: var(--ink-2);
+      white-space: pre-line;
+      margin: 0;
+    }
+
+    .modal-footer-custom {
+      padding: 1rem 2rem 1.5rem;
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      border-top: 1px solid #f0f0f4;
+    }
+    .btn-dismiss {
+      padding: 0.55rem 1.25rem;
+      border-radius: 8px;
+      border: 1.5px solid #e0e0eb;
+      background: transparent;
+      color: var(--ink-2);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .btn-dismiss:hover { background: var(--canvas); }
+    .btn-register {
+      padding: 0.55rem 1.5rem;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s;
+    }
+    .btn-register:hover { background: var(--accent-2); }
+
+    /* ── Footer ────────────────────────────────────────── */
+    .site-footer {
+      background: var(--ink);
+      padding: 2rem 0;
+      text-align: center;
+    }
+    .footer-brand {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.7);
+      letter-spacing: -0.3px;
+      margin-bottom: 0.3rem;
+    }
+    .footer-sub { font-size: 0.78rem; color: rgba(255,255,255,0.3); }
+
+    /* ── Responsive ────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .search-bar { flex-wrap: wrap; }
+      .search-bar input, .search-bar select { min-width: 100%; }
+      .stats-inner { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+      .modal-body-custom { padding: 1.25rem; }
+      .modal-hero { padding: 1.5rem; }
+      .modal-footer-custom { padding: 1rem 1.25rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .event-card, .btn-search, .btn-clear, .chip { transition: none; }
+      .hero-eyebrow .dot { animation: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navbar ─────────────────────────────────────────── -->
+<nav class="site-nav">
+  <div class="nav-inner">
+    <a href="/" class="brand">
+      <span class="brand-dot"></span> EventHub
+    </a>
+    <div class="nav-source">
+      Data source:
+      <span class="source-badge ok" th:if="${cachePopulated}">
+        <i class="bi bi-circle-fill" style="font-size:6px"></i> Redis live
+      </span>
+      <span class="source-badge warn" th:unless="${cachePopulated}">
+        <i class="bi bi-exclamation-circle"></i> Cache empty
+      </span>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ───────────────────────────────────────────── -->
+<section class="hero">
+  <div class="container hero-content">
+    <div class="hero-eyebrow">
+      <span class="dot"></span> Live from Redis cache
+    </div>
+    <h1>Find your next<br><em>great experience</em></h1>
+    <p class="hero-sub">Discover conferences, workshops, seminars and networking events near you.</p>
+
+    <form class="search-bar" method="get" action="/">
+      <i class="bi bi-search" style="color:rgba(255,255,255,0.35);padding-left:0.5rem;flex-shrink:0"></i>
+      <input type="text" name="search" placeholder="Search events…" th:value="${search}"/>
+      <span class="sep"></span>
+      <select name="categoryId">
+        <option value="">All categories</option>
+        <option th:each="cat : ${categories}"
+                th:value="${cat.id}"
+                th:text="${cat.name}"
+                th:selected="${cat.id == selectedCategory}">Category</option>
+      </select>
+      <button type="submit" class="btn-search">
+        <i class="bi bi-search me-1"></i> Search
+      </button>
+      <a href="/" class="btn-clear" title="Clear filters">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </form>
+  </div>
+</section>
+
+<!-- ── Stats strip ────────────────────────────────────── -->
+<div class="stats-strip">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <span class="stat-dot green" th:if="${cachePopulated}"></span>
+      <span class="stat-dot amber" th:unless="${cachePopulated}"></span>
+      <span>
+        <span class="stat-val" th:text="${eventCount}">0</span>
+        events loaded from Redis
+      </span>
+    </div>
+    <div class="stat-item" th:if="${cachePopulated}">
+      Cache expires in <span class="stat-val ms-1" th:text="${cacheTtl}">0</span>s
+      &nbsp;·&nbsp; No direct DB access on this page
+    </div>
+  </div>
+</div>
+
+<!-- ── Main ───────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- Category chips -->
+  <div class="filter-chips" th:if="${!#lists.isEmpty(categories)}">
+    <a href="/" class="chip" th:classappend="${selectedCategory == null} ? ' active' : ''">
+      All events
+    </a>
+    <a th:each="cat : ${categories}"
+       th:href="@{/(categoryId=${cat.id})}"
+       th:text="${cat.name}"
+       th:classappend="${cat.id == selectedCategory} ? ' active' : ''"
+       class="chip">
+      Category
+    </a>
+  </div>
+
+  <!-- Section heading -->
+  <div class="section-head">
+    <h2 th:text="${selectedCategory != null or search != null} ? 'Filtered results' : 'Upcoming events'">Upcoming events</h2>
+    <span th:text="${eventCount} + ' events'">0 events</span>
+  </div>
+
+  <!-- Cache empty warning -->
+  <div th:if="${!cachePopulated}" class="state-box mb-4" style="border-color:#fde68a;background:#fffbeb">
+    <span class="state-icon">⚡</span>
+    <h4>Cache is warming up</h4>
+    <p>Events will appear once Redis is populated. Ask an admin to trigger a cache refresh.</p>
+  </div>
+
+  <!-- No results -->
+  <div th:if="${cachePopulated and #lists.isEmpty(events)}" class="state-box">
+    <span class="state-icon">🔍</span>
+    <h4>No events found</h4>
+    <p>Nothing matched your search. Try a different keyword or category.</p>
+    <a href="/" class="btn-state">Clear filters</a>
+  </div>
+
+  <!-- Events grid -->
+  <div class="events-grid">
+    <div class="event-card"
+         th:each="event, iterStat : ${events}"
+         data-bs-toggle="modal"
+         data-bs-target="#eventModal"
+         th:data-title="${event.title}"
+         th:data-category="${event.categoryName}"
+         th:data-desc="${event.description}"
+         th:data-location="${event.location}"
+         th:data-date="${#temporals.format(event.eventDate, 'MMM dd, yyyy · HH:mm')}"
+         th:data-stripe="${iterStat.index % 5}">
+
+      <!-- Color stripe top -->
+      <div class="card-stripe" th:classappend="'stripe-' + ${iterStat.index % 5}"></div>
+
+      <div class="card-thumb">
+        <img th:if="${event.imageUrl}" th:src="${event.imageUrl}" alt=""/>
+        <i class="bi bi-calendar-event"></i>
+        <span class="card-cat" th:text="${event.categoryName}">Category</span>
+      </div>
+
+      <div class="card-body-custom">
+        <h3 class="card-title-custom" th:text="${event.title}">Event Title</h3>
+        <p class="card-desc" th:text="${#strings.abbreviate(event.description, 110)}">Description</p>
+        <div class="card-meta">
+          <div class="meta-row">
+            <i class="bi bi-geo-alt"></i>
+            <span th:text="${event.location}">Location</span>
+          </div>
+          <div class="meta-row date">
+            <i class="bi bi-clock"></i>
+            <span th:text="${#temporals.format(event.eventDate, 'MMM dd, yyyy · HH:mm')}">Date</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Modal ──────────────────────────────────────────── -->
+<div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+
+      <div class="modal-hero">
+        <button class="modal-close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+        <div class="modal-hero-content">
+          <span class="modal-cat-badge" id="modalCategory">Category</span>
+          <h2 class="modal-title-custom" id="modalTitle">Event Title</h2>
+        </div>
+      </div>
+
+      <div class="modal-body-custom">
+        <div class="info-pill">
+          <div class="info-pill-icon purple"><i class="bi bi-calendar-check"></i></div>
+          <div>
+            <label>Date &amp; Time</label>
+            <strong id="modalDate">—</strong>
+          </div>
+        </div>
+        <div class="info-pill">
+          <div class="info-pill-icon red"><i class="bi bi-geo-alt"></i></div>
+          <div>
+            <label>Location</label>
+            <strong id="modalLocation">—</strong>
+          </div>
+        </div>
+        <p class="about-label">About this event</p>
+        <p class="modal-desc-text" id="modalDesc">—</p>
+      </div>
+
+      <div class="modal-footer-custom">
+        <button class="btn-dismiss" data-bs-dismiss="modal">Close</button>
+        <button class="btn-register">Register interest</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── Footer ─────────────────────────────────────────── -->
+<footer class="site-footer">
+  <div class="footer-brand">● EventHub</div>
+  <div class="footer-sub">Spring Boot · Redis · PostgreSQL</div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  document.getElementById('eventModal').addEventListener('show.bs.modal', function(e) {
+    const c = e.relatedTarget;
+    document.getElementById('modalTitle').textContent    = c.dataset.title    || '';
+    document.getElementById('modalCategory').textContent = c.dataset.category || '';
+    document.getElementById('modalDesc').textContent     = c.dataset.desc     || '';
+    document.getElementById('modalLocation').textContent = c.dataset.location || '';
+    document.getElementById('modalDate').textContent     = c.dataset.date     || '';
+  });
+</script>
+</body>
+</html>
